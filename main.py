@@ -5,18 +5,18 @@ import requests
 import logging
 
 logging.basicConfig(
-    filename='app.log',
-    filemode='a',
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    level=logging.INFO
-    )
+    filename="app.log",
+    filemode="a",
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    level=logging.INFO,
+)
 logger = logging.getLogger(__name__)
 
 
 def filter_jobs(page_number):
     url = f"https://www.ethiopianreporterjobs.com/jobs-in-ethiopia/page/{page_number}"
     try:
-        
+
         response = requests.get(url)
         response.raise_for_status()
         soup = BeautifulSoup(response.text, "html.parser")
@@ -34,6 +34,7 @@ def filter_jobs(page_number):
     except Exception as e:
         logger.error(f"Failed to fetch job links for page {page_number}: {e}")
         return []
+
 
 def get_job_links():
     url = "https://www.ethiopianreporterjobs.com/jobs-in-ethiopia/"
@@ -75,6 +76,7 @@ def clean_text(text):
         logger.error(f"Failed to clean text: {e}")
         return text
 
+
 def get_id(url):
     try:
         parsed_url = urlparse(url)
@@ -85,14 +87,17 @@ def get_id(url):
         logger.error(f"Failed to get job ID: {e}")
         return None
 
+
 def job_detail(link):
     try:
         response = requests.get(link)
         response.raise_for_status()
         soup = BeautifulSoup(response.text, "html.parser")
-        id = get_id(link)
+        job_id = get_id(link)
         job_title = soup.find(class_="page-title").text.replace("\n", "")
-        salary_offer = soup.find(class_="value-_noo_job_field_salary cf-select-value").text
+        salary_offer = soup.find(
+            class_="value-_noo_job_field_salary cf-select-value"
+        ).text
         experience_level = soup.find(
             class_="value-_noo_job_field_experience_level cf-select-value"
         ).text
@@ -117,7 +122,7 @@ def job_detail(link):
             job_requirement_and_how_to_apply.prettify().replace("\n", "")
         )
         job = {
-            "id": id,
+            "job_id": job_id,
             "title": job_title,
             "salary_offer": salary_offer,
             "experience_level": experience_level,
@@ -133,6 +138,7 @@ def job_detail(link):
     except Exception as e:
         logger.error(f"Failed to get job detail: {e}")
         return None
+
 
 def save_on_database():
     try:
@@ -151,7 +157,7 @@ if __name__ == "__main__":
     job_data = save_on_database()
     if job_data:
         database = Database(job_data)
-        database.run()
+        database.insert_jobs()
         database.close()
         logger.info("Data saved successfully.")
     else:

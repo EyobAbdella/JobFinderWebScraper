@@ -13,9 +13,9 @@ class Database:
     def __init__(self, jobs):
         self.jobs = jobs
         self.db = mysql.connector.connect(
-                    host=db_host, user=db_user, password=db_password, database="job_finder")
+            host=db_host, user=db_user, password=db_password, database="job_finder"
+        )
         self.cursor = self.db.cursor()
-
 
     def setup_database_and_table(self):
         self.cursor.execute("CREATE DATABASE IF NOT EXISTS job_finder")
@@ -23,13 +23,14 @@ class Database:
         self.cursor.execute(
             """
             CREATE TABLE IF NOT EXISTS jobs (
-                id INT NOT NULL,
+                id INT AUTO_INCREMENT NOT NULL UNIQUE,
+                job_id INT NOT NULL UNIQUE,
                 title VARCHAR(255) NOT NULL,
                 salary_offer VARCHAR(255) NOT NULL,
                 experience_level VARCHAR(255) NOT NULL,
                 years_of_experience VARCHAR(255) NOT NULL,
-                date_posted DATE NOT NULL,
-                deadline_date DATE NOT NULL,
+                date_posted VARCHAR(200) NOT NULL,
+                deadline_date VARCHAR(200) NOT NULL,
                 job_location VARCHAR(255) NOT NULL,
                 job_type VARCHAR(255),
                 job_category VARCHAR(255),
@@ -40,16 +41,21 @@ class Database:
         )
         self.db.commit()
 
+    def get_existing_job_ids(self):
+        self.cursor.execute("SELECT job_id FROM jobs")
+        return [row[0] for row in self.cursor.fetchall()]
 
     def insert_jobs(self):
-        for job in self.jobs:
+        existing_job_ids = self.get_existing_job_ids()
+        new_jobs = [job for job in self.jobs if job["job_id"] not in existing_job_ids]
+        for job in new_jobs:
             self.cursor.execute(
                 """
-                INSERT INTO jobs (id, title, salary_offer, experience_level, years_of_experience, date_posted, deadline_date, job_location, job_type, job_category, application_process)
+                INSERT INTO jobs (job_id, title, salary_offer, experience_level, years_of_experience, date_posted, deadline_date, job_location, job_type, job_category, application_process)
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)           
                 """,
                 (
-                    job.get("id"),
+                    job.get("job_id"),
                     job.get("title"),
                     job.get("salary_offer"),
                     job.get("experience_level"),
@@ -63,10 +69,6 @@ class Database:
                 ),
             )
             self.db.commit()
-
-    def run(self):
-        # self.setup_database_and_table()
-        self.insert_jobs()
 
     def close(self):
         self.cursor.close()
